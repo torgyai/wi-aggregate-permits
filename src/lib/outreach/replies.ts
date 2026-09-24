@@ -190,7 +190,7 @@ async function act(
     await sendProposal(proposal.id, { viaReplyTo: { inboundId, subject: mail.subject, inReplyTo: mail.messageId } });
     await notifyOwner(
       `Proposal sent: ${contact.company.name}`,
-      `${who} asked for pricing ("${cls.summary}"). The autopilot sent the ${usd(s.packagePrice)} proposal.\n\nDeal: ${process.env.APP_URL ?? ""}/deals/${dealId}`,
+      `${who} asked for pricing ("${cls.summary}"). The autopilot sent the ${usd(proposal.price)} proposal.\n\nDeal: ${process.env.APP_URL ?? ""}/deals/${dealId}`,
       s,
     );
     return;
@@ -280,7 +280,7 @@ async function draftReply(cls: Classification, ctx: LeadContext | null, inbound:
           : null,
         offer: {
           name: s.packageName,
-          price: usd(s.packagePrice),
+          price: ctx?.offer.price ? `${usd(ctx.offer.price)} fixed for this site` : usd(s.packagePrice),
           deposit_pct: s.depositPct,
           includes:
             "drafted applications and plans, county/WDNR correspondence through approval, reclamation cost estimate for the bond, SWPPP, hearing prep, 12-month compliance calendar; third-party studies and agency fees are pass-through",

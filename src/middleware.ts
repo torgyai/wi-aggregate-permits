@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { readSession, SESSION_COOKIE } from "./lib/session";
 
 // Public: client-facing links, webhooks and cron (each verifies its own secret/token).
-const PUBLIC = [/^\/login/, /^\/p\//, /^\/intake\//, /^\/u\//, /^\/api\/(cron|inbound|stripe|u)\//];
+const PUBLIC = [/^\/login/, /^\/p\//, /^\/c\//, /^\/intake\//, /^\/u\//, /^\/api\/(cron|inbound|stripe|u)\//];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

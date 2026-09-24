@@ -29,14 +29,14 @@ export default async function TasksPage() {
   const later = tasks.filter((t) => t.dueAt.getTime() > now);
 
   const list = (items: typeof tasks) => (
-    <ul className="divide-y divide-stone-100">
+    <ul className="divide-y divide-slate-100">
       {items.map((t) => (
         <li key={t.id} className="flex flex-wrap items-start gap-3 py-3">
           <Badge tone={t.type === "MEETING" ? "green" : t.type === "PERMIT" ? "violet" : "gray"}>{TYPE_LABEL[t.type] ?? t.type}</Badge>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium">{t.title}</div>
-            {t.detail && <div className="text-xs text-stone-600">{t.detail}</div>}
-            <div className="mt-0.5 text-xs text-stone-400">
+            {t.detail && <div className="text-xs text-slate-600">{t.detail}</div>}
+            <div className="mt-0.5 text-xs text-slate-400">
               Due {fmtDate(t.dueAt)}
               {t.contact?.phone && <> · {t.contact.phone}</>}
               {t.contact?.email && <> · {t.contact.email}</>}
@@ -47,7 +47,7 @@ export default async function TasksPage() {
           </div>
           <form className="flex gap-2">
             <button formAction={completeTask.bind(null, t.id)} className="btn-secondary">Done</button>
-            <button formAction={skipTask.bind(null, t.id)} className="text-xs text-stone-500 underline">Skip</button>
+            <button formAction={skipTask.bind(null, t.id)} className="text-xs text-slate-500 underline">Skip</button>
           </form>
         </li>
       ))}

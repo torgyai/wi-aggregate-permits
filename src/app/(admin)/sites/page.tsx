@@ -101,20 +101,20 @@ export default async function SitesPage({ searchParams }: { searchParams: Search
             </thead>
             <tbody>
               {sites.map((s) => (
-                <tr key={s.id} className="hover:bg-stone-50">
+                <tr key={s.id} className="hover:bg-slate-50">
                   <td><ScoreBar score={s.score} /></td>
                   <td>
                     <Link className="link font-medium" href={`/sites/${s.id}`}>{s.name}</Link>
-                    {s.municipality && <div className="text-xs text-stone-500">near {s.municipality}</div>}
+                    {s.municipality && <div className="text-xs text-slate-500">near {s.municipality}</div>}
                   </td>
                   <td>
                     {s.company?.name ?? "—"} {s.company?.isLargeNational && <Badge tone="gray">national</Badge>}
                   </td>
                   <td>{s.county ?? "—"}</td>
-                  <td className="whitespace-nowrap">{COMMODITY_LABEL[s.commodity]}{s.portable && <span className="text-xs text-stone-500"> · portable</span>}</td>
+                  <td className="whitespace-nowrap">{COMMODITY_LABEL[s.commodity]}{s.portable && <span className="text-xs text-slate-500"> · portable</span>}</td>
                   <td>{MSHA_STATUS_LABEL[s.mshaStatus]}</td>
                   <td>{s._count.signals ? <Badge tone="amber">{s._count.signals}</Badge> : ""}</td>
-                  <td>{s.company?._count.contacts ? <Badge tone="green">{s.company._count.contacts}</Badge> : <span className="text-xs text-stone-400">none</span>}</td>
+                  <td>{s.company?._count.contacts ? <Badge tone="green">{s.company._count.contacts}</Badge> : <span className="text-xs text-slate-400">none</span>}</td>
                   <td>{s.deals[0] && <Badge tone={STAGE_TONE[s.deals[0].stage]}>{DEAL_STAGE_LABEL[s.deals[0].stage as DealStage]}</Badge>}</td>
                 </tr>
               ))}
@@ -122,7 +122,7 @@ export default async function SitesPage({ searchParams }: { searchParams: Search
           </table>
         )}
       </div>
-      <div className="mt-3 flex items-center justify-between text-sm text-stone-500">
+      <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
         <span>Page {page} of {Math.max(1, Math.ceil(total / PAGE))}</span>
         <div className="flex gap-2">
           {page > 1 && <Link className="btn-secondary" href={qs(page - 1)}>← Prev</Link>}
@@ -131,7 +131,7 @@ export default async function SitesPage({ searchParams }: { searchParams: Search
       </div>
 
       <Card title="Add a site by hand" className="mt-6">
-        <p className="mb-3 text-sm text-stone-500">For pits not in the MSHA registry yet (a planned site, a referral, a county hearing notice).</p>
+        <p className="mb-3 text-sm text-slate-500">For pits not in the MSHA registry yet (a planned site, a referral, a county hearing notice).</p>
         <form action={createCompanyAndSite} className="grid gap-3 md:grid-cols-6">
           <input className="input md:col-span-2" name="company" placeholder="Operator / company" required />
           <input className="input md:col-span-2" name="site" placeholder="Site name" />

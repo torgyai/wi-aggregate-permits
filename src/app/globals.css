@@ -2,60 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
+:root { color-scheme: light; }
 
-body {
-  @apply bg-stone-50 text-stone-900 antialiased;
-}
+html { font-family: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-feature-settings: "cv11", "ss01"; }
+body { @apply bg-slate-50 text-slate-900 antialiased; }
 
-.btn {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50;
-}
-.btn-secondary {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-stone-100 disabled:opacity-50;
-}
-.btn-danger {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50;
-}
-.input {
-  @apply w-full rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-sm shadow-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600;
-}
-.label {
-  @apply mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500;
-}
-.card {
-  @apply rounded-lg border border-stone-200 bg-white shadow-sm;
-}
-.table {
-  @apply w-full text-left text-sm;
-}
-.table th {
-  @apply border-b border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-stone-500;
-}
-.table td {
-  @apply border-b border-stone-100 px-3 py-2 align-top;
-}
-.link {
-  @apply text-amber-800 underline-offset-2 hover:underline;
-}
+.btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50; }
+.btn-secondary { @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50; }
+.btn-ghost { @apply inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900; }
+.btn-danger { @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3.5 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50; }
+.input { @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10; }
+.label { @apply mb-1.5 block text-xs font-medium text-slate-600; }
+.card { @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.08)]; }
+.table { @apply w-full text-left text-sm; }
+.table th { @apply border-b border-slate-100 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400; }
+.table td { @apply border-b border-slate-100 px-4 py-3 align-top; }
+.table tbody tr { @apply transition-colors hover:bg-slate-50/70; }
+.table tbody tr:last-child td { @apply border-b-0; }
+.link { @apply font-medium text-indigo-600 underline-offset-2 hover:underline; }
 
-.prose-doc h1 { @apply mb-3 text-2xl font-bold; }
-.prose-doc h2 { @apply mb-2 mt-6 text-lg font-semibold; }
-.prose-doc h3 { @apply mb-1 mt-4 font-semibold; }
+.prose-doc { @apply text-[15px] text-slate-700; }
+.prose-doc h1 { @apply mb-3 text-2xl font-semibold tracking-tight text-slate-900; }
+.prose-doc h2 { @apply mb-2 mt-7 text-lg font-semibold text-slate-900; }
+.prose-doc h3 { @apply mb-1 mt-5 font-semibold text-slate-900; }
 .prose-doc p { @apply my-2 leading-relaxed; }
 .prose-doc ul { @apply my-2 list-disc pl-6; }
 .prose-doc ol { @apply my-2 list-decimal pl-6; }
-.prose-doc li { @apply my-0.5; }
-.prose-doc table { @apply my-3 w-full border-collapse text-sm; }
-.prose-doc th, .prose-doc td { @apply border border-stone-200 px-2 py-1 text-left; }
-.prose-doc th { @apply bg-stone-50; }
-.prose-doc blockquote { @apply my-3 border-l-4 border-amber-300 bg-amber-50 px-3 py-2 text-stone-700; }
-.prose-doc code { @apply rounded bg-stone-100 px-1 text-xs; }
-.prose-doc .confirm { @apply rounded bg-yellow-100 px-1 font-medium text-yellow-900; }
+.prose-doc li { @apply my-1; }
+.prose-doc table { @apply my-4 w-full border-collapse overflow-hidden rounded-lg text-sm; }
+.prose-doc th, .prose-doc td { @apply border border-slate-200 px-3 py-1.5 text-left; }
+.prose-doc th { @apply bg-slate-50 font-medium; }
+.prose-doc blockquote { @apply my-4 rounded-r-lg border-l-4 border-indigo-300 bg-indigo-50/60 px-4 py-2.5 text-slate-700; }
+.prose-doc code { @apply rounded bg-slate-100 px-1 text-xs; }
+.prose-doc strong { @apply font-semibold text-slate-900; }
+.prose-doc .confirm { @apply rounded-md bg-amber-100 px-1 font-medium text-amber-900; }
 
-@media print {
-  .no-print { display: none !important; }
-  body { background: white; }
-}
+@media print { .no-print { display: none !important; } body { background: white; } }

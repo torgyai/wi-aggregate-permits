@@ -10,10 +10,11 @@
  *   enrich   -> Apollo lookups for top leads without a contact (once a day)
  */
 import { db } from "./db";
-import { generatePendingDocs, intakeReminders, obligationSweep } from "./delivery";
+import { depositReminders, generatePendingDocs, intakeReminders, obligationSweep } from "./delivery";
 import { runJob } from "./jobs";
 import { enrollNewLeads, processDueEnrollments } from "./outreach/engine";
 import { pollImap } from "./outreach/imap";
+import { liveSendEnabled } from "./outreach/mailer";
 import { enrichTopCompanies } from "./prospecting";
 import { nudgeProposals } from "./proposals";
 import { getSettings, sendingBlockers } from "./settings";
@@ -23,7 +24,8 @@ type Stage = { name: string; run: () => Promise<{ summary: string }> };
 export async function tick(now = new Date()) {
   const s = await getSettings();
   const blockers = sendingBlockers(s);
-  const canSend = s.autopilot && (blockers.length === 0 || process.env.MAIL_TRANSPORT === "log");
+  // In safe mode (dry run) the full workflow runs so it can be tested; live mode needs every blocker cleared.
+  const canSend = s.autopilot && (!liveSendEnabled() || blockers.length === 0);
 
   const stages: Stage[] = [
     { name: "replies", run: () => pollImap() },
@@ -35,6 +37,7 @@ export async function tick(now = new Date()) {
       { name: "send", run: () => processDueEnrollments(now, s) },
       { name: "proposals", run: () => nudgeProposals(now) },
       { name: "intake", run: () => intakeReminders(now) },
+      { name: "deposits", run: () => depositReminders(now) },
       { name: "compliance", run: () => obligationSweep(now) },
     );
   }

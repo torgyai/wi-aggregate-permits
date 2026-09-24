@@ -30,10 +30,10 @@ export default async function ProjectsPage() {
                 return (
                   <tr key={p.id}>
                     <td><Link className="link font-medium" href={`/projects/${p.id}`}>{p.deal.company.name}</Link></td>
-                    <td>{p.deal.site?.name ?? "—"}<div className="text-xs text-stone-500">{p.deal.site?.county}</div></td>
+                    <td>{p.deal.site?.name ?? "—"}<div className="text-xs text-slate-500">{p.deal.site?.county}</div></td>
                     <td><Badge tone={p.status === "INTAKE" ? "amber" : p.status === "COMPLIANCE" ? "green" : "blue"}>{p.status.toLowerCase().replace("_", " ")}</Badge></td>
                     <td>{approved}/{live.length} approved</td>
-                    <td className="text-sm">{p.obligations[0] ? <>{p.obligations[0].title}<div className="text-xs text-stone-500">{fmtDate(p.obligations[0].dueAt)}</div></> : "—"}</td>
+                    <td className="text-sm">{p.obligations[0] ? <>{p.obligations[0].title}<div className="text-xs text-slate-500">{fmtDate(p.obligations[0].dueAt)}</div></> : "—"}</td>
                     <td>{usd(p.deal.value)}</td>
                   </tr>
                 );

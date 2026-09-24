@@ -50,7 +50,7 @@ export default async function InboxPage() {
         ) : (
           <div className="space-y-6">
             {pending.map((m, i) => (
-              <div key={m.id} className="grid gap-4 border-b border-stone-100 pb-6 last:border-0 md:grid-cols-2">
+              <div key={m.id} className="grid gap-4 border-b border-slate-100 pb-6 last:border-0 md:grid-cols-2">
                 <div>
                   <div className="mb-1 text-sm">
                     <strong>{m.contact ? fullName(m.contact) : m.toEmail}</strong>
@@ -59,12 +59,12 @@ export default async function InboxPage() {
                       <> <Badge tone={CLASS_TONE[originals[i]!.classification!]}>{REPLY_CLASS_LABEL[originals[i]!.classification as ReplyClass]}</Badge></>
                     )}
                   </div>
-                  <div className="mb-2 text-xs text-stone-500">{originals[i]?.aiSummary}</div>
-                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-stone-50 p-3 font-sans text-sm">{originals[i]?.body ?? "(original not found)"}</pre>
+                  <div className="mb-2 text-xs text-slate-500">{originals[i]?.aiSummary}</div>
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-sans text-sm">{originals[i]?.body ?? "(original not found)"}</pre>
                   {m.status === "FAILED" && <p className="mt-2 text-xs text-red-700">Send failed: {m.error}</p>}
                 </div>
                 <form action={approveReply.bind(null, m.id)} className="space-y-2">
-                  <div className="text-xs text-stone-500">{m.subject} · drafted by {m.generatedBy === "ai" ? "Claude" : "template"}</div>
+                  <div className="text-xs text-slate-500">{m.subject} · drafted by {m.generatedBy === "ai" ? "Claude" : "template"}</div>
                   <textarea className="input font-sans" name="body" rows={10} defaultValue={m.body} />
                   <div className="flex gap-2">
                     <SubmitButton pendingText="Sending…">Send</SubmitButton>
@@ -89,7 +89,7 @@ export default async function InboxPage() {
                   <td className="whitespace-nowrap text-xs">{fmtDateTime(m.createdAt)}</td>
                   <td className="text-sm">
                     {m.contact ? fullName(m.contact) : m.fromEmail}
-                    <div className="text-xs text-stone-500">{m.contact?.company.name ?? "unmatched"}</div>
+                    <div className="text-xs text-slate-500">{m.contact?.company.name ?? "unmatched"}</div>
                   </td>
                   <td>{m.classification && <Badge tone={CLASS_TONE[m.classification]}>{REPLY_CLASS_LABEL[m.classification as ReplyClass]}</Badge>}</td>
                   <td className="text-sm">

@@ -11,6 +11,16 @@ This app finds Wisconsin sand & gravel pits and stone quarries that need permits
       ─► permit drafts (Claude) ─► you review & file ─► compliance calendar + client reminders ─► $/mo plan
 ```
 
+## What's new in v2
+- **Safe mode lock:** no email can leave unless `LIVE_SEND=on` *and* `MAIL_TRANSPORT=smtp|resend`. Everything is still written and recorded so the whole flow can be tested. The top bar always shows the mode.
+- **Pricing engine:** each site gets a tier and price (T1 tune-up $15–25k · T2 standard pit $40k · T3 quarry $55–75k · T4 multi-site / industrial sand $90–150k) plus a monthly compliance plan, with reasons. You can override it per deal.
+- **40 researched target accounts** with fit, trigger, scope, price and outreach angle (`/accounts`, `docs/target-accounts.md`). Loading them adds no contacts, so nothing is emailed.
+- **Client portal** (`/c/<token>`) shows project progress, drafts to read and approve or comment on, the compliance calendar, a one-click compliance plan and the balance payment.
+- **Deal controls:** price override, pause/resume outreach, exclude company, compose a one-off email.
+- **Payments:** deposit and balance through Stripe (ACH/card), or **Mark paid**, with deposit reminders.
+- **Training course** (`/training`, 13 lessons) and **Launch checklist** (`/launch`). The full list of manual steps is in `docs/manual-steps.md`.
+- New UI.
+
 ## How it works
 
 ### 1. Finding leads (automatic, weekly)

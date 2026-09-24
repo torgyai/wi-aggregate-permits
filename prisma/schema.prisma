@@ -31,6 +31,17 @@ model Company {
   /// Number of sites this controller runs nationally (from MSHA); large nationals have in-house staff.
   nationalSiteCount Int?
   isLargeNational  Boolean   @default(false)
+  /// Never target (bad fit, competitor, asked not to be contacted at company level).
+  excluded         Boolean   @default(false)
+  /// Target-account research (hand-picked list): region, fit 1-5, suggested tier/price, outreach angle.
+  isTargetAccount  Boolean   @default(false)
+  region           String?
+  fitScore         Int?
+  pricingTier      String?
+  suggestedPrice   Float?
+  suggestedRetainer Float?
+  outreachAngle    String?
+  sources          String?
   enrichedAt       DateTime?
   source           String    @default("MSHA") // MSHA | CSV | APOLLO | MANUAL
   notes            String?
@@ -214,6 +225,10 @@ model Deal {
   primaryContactId String?
   stage            String       @default("NEW") // NEW | CONTACTED | ENGAGED | MEETING | PROPOSAL | WON | LOST
   value            Float        @default(40000)
+  /// Pricing engine tier (T1-T4) and suggested compliance plan; priceOverridden = set by hand, keep it.
+  pricingTier      String?
+  retainerMonthly  Float?
+  priceOverridden  Boolean      @default(false)
   source           String       @default("OUTBOUND")
   lostReason       String?
   meetingAt        DateTime?
@@ -261,6 +276,10 @@ model Proposal {
   signerIp        String?
   stripeSessionId String?
   depositPaidAt   DateTime?
+  balancePaidAt   DateTime?
+  retainerMonthly Float?
+  pricingTier     String?
+  customNote      String?
   expiresAt       DateTime
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -277,6 +296,10 @@ model Project {
   intake            Json?
   intakeSubmittedAt DateTime?
   intakeRemindedAt  DateTime?
+  /// Drafts shared with the client on the portal.
+  sharedAt          DateTime?
+  retainerActive    Boolean        @default(false)
+  retainerStartedAt DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   permits           PermitItem[]
@@ -313,6 +336,8 @@ model GeneratedDoc {
   content     String // Markdown
   generatedBy String // ai | template
   version     Int      @default(1)
+  clientApprovedAt DateTime?
+  clientComment    String?
   createdAt   DateTime @default(now())
 }
 

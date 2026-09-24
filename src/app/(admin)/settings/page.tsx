@@ -15,7 +15,7 @@ function Field({ name, label, s, type = "text", hint, step }: { name: keyof Sett
     <div>
       <label className="label" htmlFor={name}>{label}</label>
       <input className="input" id={name} name={name} type={type} step={step} defaultValue={String(s[name] ?? "")} />
-      {hint && <p className="mt-0.5 text-xs text-stone-500">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -26,7 +26,7 @@ function Toggle({ name, label, s, hint }: { name: keyof Settings; label: string;
       <input type="checkbox" name={name} defaultChecked={Boolean(s[name])} className="mt-0.5" />
       <span>
         <span className="font-medium">{label}</span>
-        {hint && <span className="block text-xs text-stone-500">{hint}</span>}
+        {hint && <span className="block text-xs text-slate-500">{hint}</span>}
       </span>
     </label>
   );
@@ -134,12 +134,12 @@ export default async function SettingsPage() {
         <dl className="grid gap-y-1 text-sm md:grid-cols-[200px_1fr]">
           {env.map(([k, v]) => (
             <div key={k} className="contents">
-              <dt className="text-stone-500">{k}</dt>
+              <dt className="text-slate-500">{k}</dt>
               <dd>{v}</dd>
             </div>
           ))}
         </dl>
-        <p className="mt-3 text-xs text-stone-500">Credentials are environment variables (see .env.example) — never stored in the database.</p>
+        <p className="mt-3 text-xs text-slate-500">Credentials are environment variables (see .env.example) — never stored in the database.</p>
       </Card>
     </>
   );

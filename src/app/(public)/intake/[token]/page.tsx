@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { db } from "@/lib/db";
@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <section className="border-t border-stone-200 pt-6">
+    <section className="border-t border-slate-200 pt-6">
       <h2 className="text-lg font-semibold">{title}</h2>
-      {hint && <p className="mb-3 text-sm text-stone-500">{hint}</p>}
+      {hint && <p className="mb-3 text-sm text-slate-500">{hint}</p>}
       <div className="grid gap-4 md:grid-cols-2">{children}</div>
     </section>
   );
@@ -28,7 +28,7 @@ function Text({ name, label, hint, required, type = "text", wide, defaultValue }
       ) : (
         <input className="input" id={name} name={name} type={type} step="any" required={required} defaultValue={defaultValue ?? undefined} />
       )}
-      {hint && <p className="mt-0.5 text-xs text-stone-500">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -44,7 +44,7 @@ function YesNo({ name, label, hint }: { name: string; label: string; hint?: stri
           </label>
         ))}
       </div>
-      {hint && <p className="mt-0.5 text-xs text-stone-500">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -58,25 +58,14 @@ export default async function IntakePage({ params, searchParams }: { params: { t
   const s = await getSettings();
   const site = project.deal.site;
 
-  if (searchParams.done || project.intakeSubmittedAt) {
-    return (
-      <div className="mx-auto max-w-xl px-4 py-16">
-        <div className="card p-8 text-center">
-          <h1 className="text-xl font-bold">Thanks — we have what we need.</h1>
-          <p className="mt-2 text-stone-600">
-            We&apos;re drafting your applications now and will send them over for review. Anything marked &quot;not sure&quot; we&apos;ll sort out with you on a quick call.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (searchParams.done || project.intakeSubmittedAt) redirect(`/c/${params.token}`);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="card p-8">
-        <div className="text-xs uppercase tracking-widest text-amber-800">{s.companyName}</div>
+        <div className="text-xs uppercase tracking-widest text-indigo-700">{s.companyName}</div>
         <h1 className="mt-1 text-2xl font-bold">Site questionnaire — {project.deal.company.name}</h1>
-        <p className="mt-2 text-sm text-stone-600">
+        <p className="mt-2 text-sm text-slate-600">
           About 15 minutes. &quot;Not sure&quot; is a fine answer — we&apos;ll fill gaps on a call. Everything here goes straight into your permit drafts, so you won&apos;t be asked twice.
         </p>
 
@@ -168,7 +157,7 @@ export default async function IntakePage({ params, searchParams }: { params: { t
             <Text name="siteContactPhone" label="On-site contact phone" type="tel" />
           </Section>
 
-          <div className="border-t border-stone-200 pt-6">
+          <div className="border-t border-slate-200 pt-6">
             <SubmitButton pendingText="Submitting…">Submit questionnaire</SubmitButton>
           </div>
         </form>

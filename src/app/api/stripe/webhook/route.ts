@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { markDepositPaid } from "@/lib/proposals";
+import { markBalancePaid, markDepositPaid } from "@/lib/proposals";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,8 @@ export async function POST(req: Request) {
     event.type === "checkout.session.async_payment_succeeded"
   ) {
     const proposalId = event.data.object.metadata?.proposalId;
-    if (proposalId) await markDepositPaid(proposalId);
+    const kind = event.data.object.metadata?.kind ?? "deposit";
+    if (proposalId) await (kind === "balance" ? markBalancePaid(proposalId) : markDepositPaid(proposalId));
   }
   return NextResponse.json({ received: true });
 }

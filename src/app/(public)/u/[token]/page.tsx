@@ -15,7 +15,7 @@ export default function UnsubscribePage({ params, searchParams }: { params: { to
         ) : searchParams.done ? (
           <>
             <h1 className="text-lg font-semibold">You&apos;re unsubscribed.</h1>
-            <p className="mt-2 text-sm text-stone-600">{email} won&apos;t receive further emails from us.</p>
+            <p className="mt-2 text-sm text-slate-600">{email} won&apos;t receive further emails from us.</p>
           </>
         ) : (
           <form action={unsubscribeAction.bind(null, params.token)} className="space-y-4">

@@ -18,6 +18,12 @@ import { getSettings, saveSettings, SettingsSchema } from "@/lib/settings";
 import { readUnsubscribeToken } from "@/lib/tokens";
 import { syncWdnrApplications } from "@/lib/wdnr";
 import { normalizeCompanyName } from "@/lib/msha";
+import { repriceDeal } from "@/lib/quote";
+import { loadTargetAccounts } from "@/lib/target-load";
+import { TRAINING_KEY } from "@/lib/training";
+import { clientReviewDoc, portalUrl, shareDraftsWithClient, startCompliancePlan } from "@/lib/delivery";
+import { createCheckout, markBalancePaid, markDepositPaid } from "@/lib/proposals";
+import { composeBody, sendMail } from "@/lib/outreach/mailer";
 
 // Server actions are reachable from any route, so each admin action checks the
 // session itself rather than relying on the path-based middleware.
@@ -120,6 +126,7 @@ export async function enrollSite(siteId: string) {
     (await db.deal.create({
       data: { companyId: site.company.id, siteId, primaryContactId: contact.id, value: s.packagePrice, source: "OUTBOUND" },
     }));
+  await repriceDeal(deal.id, s);
   await db.enrollment.upsert({
     where: { contactId_sequenceKey: { contactId: contact.id, sequenceKey: DEFAULT_SEQUENCE_KEY } },
     create: { contactId: contact.id, siteId, dealId: deal.id, sequenceKey: DEFAULT_SEQUENCE_KEY, nextRunAt: nextSendTime(new Date(), s) },
@@ -363,11 +370,132 @@ export async function submitIntakeAction(token: string, form: FormData) {
     if (typeof value === "string" && !key.startsWith("$")) raw[key] = value;
   });
   await submitIntake(token, raw);
-  redirect(`/intake/${token}?done=1`);
+  redirect(`/c/${token}?welcome=1`);
 }
 
 export async function unsubscribeAction(token: string) {
   const email = readUnsubscribeToken(token);
   if (email) await unsubscribe(email, "link");
   redirect(`/u/${token}?done=1`);
+}
+
+// ---------------------------------------------------------------- v2: pricing, control, portal, training
+
+export async function loadTargetAccountsAction() {
+  await requireAdmin();
+  await runJob("targets", () => loadTargetAccounts());
+  revalidatePath("/", "layout");
+}
+
+export async function setDealPrice(dealId: string, form: FormData) {
+  await requireAdmin();
+  const price = Number(str(form, "price"));
+  const retainer = str(form, "retainer");
+  if (!price || price < 1000) throw new Error("Enter a price");
+  await db.deal.update({
+    where: { id: dealId },
+    data: { value: price, priceOverridden: true, retainerMonthly: retainer ? Number(retainer) : undefined, pricingTier: str(form, "tier") || undefined },
+  });
+  await logDealEvent(dealId, "PRICE_SET", `$${price.toLocaleString()} (manual)`);
+  revalidatePath(`/deals/${dealId}`);
+}
+
+export async function resetDealPrice(dealId: string) {
+  await requireAdmin();
+  await db.deal.update({ where: { id: dealId }, data: { priceOverridden: false } });
+  const d = await repriceDeal(dealId, await getSettings());
+  await logDealEvent(dealId, "PRICE_SET", `$${d.value.toLocaleString()} (engine)`);
+  revalidatePath(`/deals/${dealId}`);
+}
+
+export async function setOutreachPaused(dealId: string, paused: boolean) {
+  await requireAdmin();
+  const s = await getSettings();
+  await db.enrollment.updateMany({
+    where: { dealId, status: paused ? "ACTIVE" : "PAUSED" },
+    data: paused ? { status: "PAUSED" } : { status: "ACTIVE", nextRunAt: nextSendTime(new Date(), s) },
+  });
+  await logDealEvent(dealId, paused ? "OUTREACH_PAUSED" : "OUTREACH_RESUMED");
+  revalidatePath(`/deals/${dealId}`);
+}
+
+export async function setCompanyExcluded(companyId: string, excluded: boolean) {
+  await requireAdmin();
+  await db.company.update({ where: { id: companyId }, data: { excluded } });
+  if (excluded) {
+    const contacts = await db.contact.findMany({ where: { companyId }, select: { id: true } });
+    await db.enrollment.updateMany({
+      where: { contactId: { in: contacts.map((c) => c.id) }, status: { in: ["ACTIVE", "PAUSED"] } },
+      data: { status: "STOPPED", stoppedReason: "company excluded", nextRunAt: null },
+    });
+  }
+  revalidatePath("/", "layout");
+}
+
+/** One-off email from a deal (goes through the same send lock: dry run unless LIVE_SEND=on). */
+export async function sendManualEmail(dealId: string, form: FormData) {
+  await requireAdmin();
+  const s = await getSettings();
+  const deal = await db.deal.findUniqueOrThrow({ where: { id: dealId } });
+  const contact = deal.primaryContactId ? await db.contact.findUnique({ where: { id: deal.primaryContactId } }) : null;
+  if (!contact?.email) throw new Error("No contact email on this deal");
+  const suppressed = await db.suppression.findUnique({ where: { email: contact.email } });
+  if (suppressed || contact.doNotContact) throw new Error("This contact unsubscribed");
+  const last = await db.message.findFirst({ where: { contactId: contact.id, status: "SENT" }, orderBy: { createdAt: "desc" } });
+  const subject = str(form, "subject") || (last?.subject ? `Re: ${last.subject.replace(/^Re:\s*/i, "")}` : "Following up");
+  const text = composeBody(str(form, "body"), s, contact.email);
+  const res = await sendMail(
+    { from: last?.fromEmail || s.fromEmail, fromName: s.senderName, to: contact.email, subject, text, replyTo: s.replyToEmail || undefined, inReplyTo: last?.providerId, bulk: true },
+    last?.fromEmail ?? undefined,
+  );
+  await db.message.create({
+    data: { direction: "OUT", contactId: contact.id, dealId, fromEmail: res.mailbox, toEmail: contact.email, subject, body: text, status: "SENT", providerId: res.messageId, generatedBy: "manual", sentAt: new Date() },
+  });
+  await logDealEvent(dealId, "EMAIL_SENT", subject);
+  revalidatePath(`/deals/${dealId}`);
+}
+
+export async function shareDraftsAction(projectId: string) {
+  await requireAdmin();
+  await shareDraftsWithClient(projectId);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function markPaidAction(projectId: string, kind: "deposit" | "balance") {
+  await requireAdmin();
+  const project = await db.project.findUniqueOrThrow({ where: { id: projectId }, include: { deal: { include: { proposal: true } } } });
+  const p = project.deal.proposal;
+  if (!p) throw new Error("No proposal on this deal");
+  await (kind === "deposit" ? markDepositPaid(p.id) : markBalancePaid(p.id));
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function toggleLesson(slug: string) {
+  await requireAdmin();
+  const row = await db.setting.findUnique({ where: { key: TRAINING_KEY } });
+  const done = new Set<string>(row ? (JSON.parse(row.value) as string[]) : []);
+  done.has(slug) ? done.delete(slug) : done.add(slug);
+  const value = JSON.stringify([...done]);
+  await db.setting.upsert({ where: { key: TRAINING_KEY }, create: { key: TRAINING_KEY, value }, update: { value } });
+  revalidatePath("/training", "layout");
+}
+
+// ---------------------------------------------------------------- client portal (token-authorized)
+
+export async function clientReviewAction(token: string, docId: string, form: FormData) {
+  const approve = form.get("decision") === "approve";
+  await clientReviewDoc(token, docId, approve, str(form, "comment"));
+  redirect(`/c/${token}?reviewed=1#docs`);
+}
+
+export async function startPlanAction(token: string) {
+  await startCompliancePlan(token);
+  redirect(`/c/${token}?plan=1`);
+}
+
+export async function payBalanceAction(token: string) {
+  const project = await db.project.findUnique({ where: { intakeToken: token }, include: { deal: { include: { proposal: true } } } });
+  const p = project?.deal.proposal;
+  const url = p ? await createCheckout(p.token, "balance", portalUrl(token)) : null;
+  redirect(url ?? `/c/${token}`);
 }

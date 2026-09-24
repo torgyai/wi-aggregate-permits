@@ -11,6 +11,7 @@ import { writeEmail } from "@/lib/outreach/personalize";
 import { getSequence, DEFAULT_SEQUENCE_KEY } from "@/lib/outreach/sequence";
 import { assessNeeds, estimateTimelineWeeks, profileFromSite, signalFlags } from "@/lib/permits/catalog";
 import { getSettings } from "@/lib/settings";
+import { quoteForSite } from "@/lib/quote";
 import { addContact, addSignal, enrollSite, updateSiteFacts } from "../../../actions";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export default async function SitePage({ params, searchParams }: { params: { id:
   const s = await getSettings();
   const needs = assessNeeds(profileFromSite(site, signalFlags(site.signals)));
   const [lo, hi] = estimateTimelineWeeks(needs);
+  const q = await quoteForSite(site.id, s);
   const reasons = (site.scoreReasons as { points: number; reason: string }[]) ?? [];
   const emailContact = site.company?.contacts.find((c) => c.email && !c.doNotContact);
 
@@ -73,8 +75,8 @@ export default async function SitePage({ params, searchParams }: { params: { id:
 
       {preview && (
         <Card title={`First email preview (${preview.by === "ai" ? "Claude" : "template"})`} className="mb-6">
-          <div className="mb-2 text-sm"><span className="text-stone-500">Subject:</span> <strong>{preview.subject}</strong></div>
-          <pre className="whitespace-pre-wrap rounded bg-stone-50 p-3 font-sans text-sm">{preview.body}</pre>
+          <div className="mb-2 text-sm"><span className="text-slate-500">Subject:</span> <strong>{preview.subject}</strong></div>
+          <pre className="whitespace-pre-wrap rounded bg-slate-50 p-3 font-sans text-sm">{preview.body}</pre>
         </Card>
       )}
 
@@ -88,10 +90,10 @@ export default async function SitePage({ params, searchParams }: { params: { id:
               <tbody>
                 {needs.map((n) => (
                   <tr key={n.key} className={n.status === "NO" ? "opacity-50" : ""}>
-                    <td className="font-medium">{n.shortName}<div className="text-xs font-normal text-stone-500">{n.citation}</div></td>
+                    <td className="font-medium">{n.shortName}<div className="text-xs font-normal text-slate-500">{n.citation}</div></td>
                     <td className="text-xs">{n.agency}</td>
                     <td><Badge tone={APPLICABILITY_TONE[n.status]}>{n.status.toLowerCase()}</Badge></td>
-                    <td className="text-xs text-stone-600">{n.reason}</td>
+                    <td className="text-xs text-slate-600">{n.reason}</td>
                   </tr>
                 ))}
               </tbody>
@@ -162,6 +164,27 @@ export default async function SitePage({ params, searchParams }: { params: { id:
         </div>
 
         <div className="space-y-6">
+          <Card title="Estimated price">
+            <div className="text-2xl font-semibold tabular-nums">{usd(site.company?.suggestedPrice ?? q.price)}</div>
+            <div className="text-xs text-slate-500">
+              {site.company?.suggestedPrice ? `Researched: ${site.company.pricingTier}` : `${q.tier} · ${q.tierName}`} · plan{" "}
+              {usd(site.company?.suggestedRetainer ?? q.retainerMonthly)}/mo
+            </div>
+            <ul className="mt-3 list-disc space-y-0.5 pl-4 text-xs text-slate-600">{q.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+          </Card>
+
+          {site.company?.isTargetAccount && (
+            <Card title="Research notes">
+              {site.company.outreachAngle && <p className="mb-2 rounded-lg bg-indigo-50/60 px-3 py-2 text-sm text-indigo-950">&ldquo;{site.company.outreachAngle}&rdquo;</p>}
+              <pre className="whitespace-pre-wrap font-sans text-xs text-slate-600">{site.company.notes}</pre>
+              <div className="mt-2 space-y-0.5 text-xs">
+                {(site.company.sources ?? "").split("\n").filter(Boolean).map((u) => (
+                  <a key={u} href={u} target="_blank" rel="noreferrer" className="link block truncate">{u}</a>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <Card title="Lead score">
             <div className="mb-3"><ScoreBar score={site.score} /></div>
             <ul className="space-y-1 text-sm">
@@ -185,7 +208,7 @@ export default async function SitePage({ params, searchParams }: { params: { id:
                   <li key={d.id}>
                     <Link className="link" href={`/deals/${d.id}`}>{usd(d.value)}</Link>{" "}
                     <Badge tone={STAGE_TONE[d.stage]}>{DEAL_STAGE_LABEL[d.stage as DealStage]}</Badge>
-                    <span className="text-xs text-stone-500"> · {fmtDate(d.createdAt)}</span>
+                    <span className="text-xs text-slate-500"> · {fmtDate(d.createdAt)}</span>
                   </li>
                 ))}
               </ul>
@@ -194,14 +217,14 @@ export default async function SitePage({ params, searchParams }: { params: { id:
 
           <Card title="Signals">
             {site.signals.length === 0 ? (
-              <p className="text-sm text-stone-500">None yet.</p>
+              <p className="text-sm text-slate-500">None yet.</p>
             ) : (
               <ul className="mb-4 space-y-2 text-sm">
                 {site.signals.map((sg) => (
                   <li key={sg.id}>
                     <Badge tone="amber">{SIGNAL_LABEL[sg.type] ?? sg.type}</Badge> {sg.title}
-                    {sg.detail && <div className="text-xs text-stone-500">{sg.detail}</div>}
-                    <div className="text-xs text-stone-400">{fmtDate(sg.detectedAt)}</div>
+                    {sg.detail && <div className="text-xs text-slate-500">{sg.detail}</div>}
+                    <div className="text-xs text-slate-400">{fmtDate(sg.detectedAt)}</div>
                   </li>
                 ))}
               </ul>
@@ -225,7 +248,7 @@ export default async function SitePage({ params, searchParams }: { params: { id:
                 {site.company.sites.filter((x) => x.id !== site.id).map((x) => (
                   <li key={x.id} className="flex justify-between">
                     <Link className="link" href={`/sites/${x.id}`}>{x.name}</Link>
-                    <span className="text-xs text-stone-500">{x.county}</span>
+                    <span className="text-xs text-slate-500">{x.county}</span>
                   </li>
                 ))}
               </ul>

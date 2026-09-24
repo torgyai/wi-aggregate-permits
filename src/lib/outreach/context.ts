@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { COMMODITY_LABEL } from "../enums";
 import { assessNeeds, inScope, profileFromSite, estimateTimelineWeeks, signalFlags, type NeedsItem } from "../permits/catalog";
+import { quoteForSite } from "../quote";
 import type { Settings } from "../settings";
 
 export type Angle = "OWNERSHIP_CHANGE" | "NEW_MINE" | "EXPANSION" | "REACTIVATION" | "GENERAL";
@@ -95,6 +96,8 @@ export async function buildLeadContext(contactId: string, siteId: string | null,
       bookingUrl: settings.bookingUrl,
       website: settings.website,
     },
-    offer: { name: settings.packageName, price: settings.packagePrice, retainerMonthly: settings.retainerMonthly },
+    offer: site
+      ? await quoteForSite(site.id, settings).then((q) => ({ name: settings.packageName, price: q.price, retainerMonthly: q.retainerMonthly }))
+      : { name: settings.packageName, price: settings.packagePrice, retainerMonthly: settings.retainerMonthly },
   };
 }

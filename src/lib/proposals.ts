@@ -9,6 +9,7 @@ import { COMMODITY_LABEL } from "./enums";
 import { usd } from "./format";
 import { assessNeeds, estimateTimelineWeeks, profileFromSite, signalFlags, type NeedsItem } from "./permits/catalog";
 import { appUrl, getSettings, type Settings } from "./settings";
+import { repriceDeal } from "./quote";
 import { randomToken } from "./tokens";
 import { composeBody, sendMail } from "./outreach/mailer";
 import { logDealEvent } from "./outreach/engine";
@@ -39,6 +40,7 @@ export function buildScope(
   s: Settings,
   deal: { company: { name: string }; site: Parameters<typeof profileFromSite>[0] & { name: string } | null },
   opts: { ownershipChange?: boolean; plannedExpansion?: boolean } = {},
+  pricing: { price: number; retainerMonthly: number } = { price: s.packagePrice, retainerMonthly: s.retainerMonthly },
 ): ProposalScope {
   const needs = deal.site
     ? assessNeeds(profileFromSite(deal.site, opts))
@@ -72,12 +74,12 @@ export function buildScope(
     exclusions: EXCLUSIONS,
     paymentTerms:
       deposit > 0 && deposit < 100
-        ? `${deposit}% (${usd((s.packagePrice * deposit) / 100)}) on signing to start work; ${100 - deposit}% (${usd(
-            (s.packagePrice * (100 - deposit)) / 100,
+        ? `${deposit}% (${usd((pricing.price * deposit) / 100)}) on signing to start work; ${100 - deposit}% (${usd(
+            (pricing.price * (100 - deposit)) / 100,
           )}) when the applications are filed.`
-        : `${usd(s.packagePrice)} on signing.`,
+        : `${usd(pricing.price)} on signing.`,
     retainer: {
-      monthly: s.retainerMonthly,
+      monthly: pricing.retainerMonthly,
       description:
         "Optional after approval: we run the compliance calendar — annual reclamation report and fee, storm water inspections and eDMRs, air records, MSHA quarterly reports — month to month, cancel anytime.",
     },
@@ -96,9 +98,14 @@ export async function createProposal(dealId: string) {
     where: { OR: [{ siteId: deal.siteId ?? "__none__" }, { companyId: deal.companyId, siteId: null }] },
     select: { type: true, detectedAt: true },
   });
-  const scope = buildScope(s, deal, signalFlags(signals));
+  const priced = await repriceDeal(dealId, s);
+  const retainerMonthly = priced.retainerMonthly ?? s.retainerMonthly;
+  const scope = buildScope(s, deal, signalFlags(signals), { price: priced.value, retainerMonthly });
   const data = {
-    price: s.packagePrice,
+    price: priced.value,
+    retainerMonthly,
+    pricingTier: priced.pricingTier,
+    customNote: existing?.customNote ?? null,
     depositPct: s.depositPct,
     scope: scope as unknown as Prisma.InputJsonValue,
     expiresAt: new Date(Date.now() + s.proposalValidDays * 86_400_000),
@@ -107,8 +114,7 @@ export async function createProposal(dealId: string) {
   const proposal = existing
     ? await db.proposal.update({ where: { id: existing.id }, data })
     : await db.proposal.create({ data: { ...data, dealId, token: randomToken() } });
-  await db.deal.update({ where: { id: dealId }, data: { value: s.packagePrice } });
-  await logDealEvent(dealId, "PROPOSAL_CREATED", `${usd(s.packagePrice)}, ${scope.included.length} permits in scope`);
+  await logDealEvent(dealId, "PROPOSAL_CREATED", `${usd(priced.value)} (${priced.pricingTier ?? "custom"}), ${scope.included.length} permits in scope`);
   return proposal;
 }
 
@@ -317,13 +323,26 @@ export async function nudgeProposals(now = new Date()) {
 
 export const stripeEnabled = () => !!process.env.STRIPE_SECRET_KEY;
 
-export async function createDepositCheckout(token: string): Promise<string | null> {
+export type PaymentKind = "deposit" | "balance";
+
+export function paymentAmount(p: { price: number; depositPct: number }, kind: PaymentKind) {
+  const deposit = Math.round((p.price * p.depositPct) / 100);
+  return kind === "deposit" ? deposit : p.price - deposit;
+}
+
+/** Stripe Checkout for the deposit (on signing) or the balance (at filing). */
+export async function createCheckout(token: string, kind: PaymentKind, returnTo?: string): Promise<string | null> {
   if (!stripeEnabled()) return null;
-  const p = await db.proposal.findUnique({ where: { token }, include: { deal: { include: { company: true } } } });
-  if (!p || p.status !== "ACCEPTED" || p.depositPaidAt || p.depositPct <= 0) return null;
+  const p = await db.proposal.findUnique({ where: { token }, include: { deal: { include: { company: true, project: true } } } });
+  if (!p || p.status !== "ACCEPTED") return null;
+  if (kind === "deposit" && (p.depositPaidAt || p.depositPct <= 0)) return null;
+  if (kind === "balance" && (p.balancePaidAt || p.depositPct >= 100)) return null;
+  const amount = paymentAmount(p, kind);
+  if (amount <= 0) return null;
   const Stripe = (await import("stripe")).default;
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const scope = p.scope as unknown as ProposalScope;
+  const back = returnTo ?? `${appUrl()}/p/${token}`;
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: p.signerEmail ?? undefined,
@@ -334,20 +353,29 @@ export async function createDepositCheckout(token: string): Promise<string | nul
         quantity: 1,
         price_data: {
           currency: "usd",
-          unit_amount: Math.round((p.price * p.depositPct) / 100) * 100,
+          unit_amount: amount * 100,
           product_data: {
-            name: `${scope.packageName} — ${p.depositPct}% deposit`,
+            name: `${scope.packageName} — ${kind === "deposit" ? `${p.depositPct}% deposit` : "balance due at filing"}`,
             description: `${scope.siteName ?? scope.clientName}${scope.county ? `, ${scope.county} County` : ""}`,
           },
         },
       },
     ],
-    metadata: { proposalId: p.id, dealId: p.dealId },
-    success_url: `${appUrl()}/p/${token}?paid=1`,
-    cancel_url: `${appUrl()}/p/${token}`,
+    metadata: { proposalId: p.id, dealId: p.dealId, kind },
+    success_url: `${back}${back.includes("?") ? "&" : "?"}paid=${kind}`,
+    cancel_url: back,
   });
   await db.proposal.update({ where: { id: p.id }, data: { stripeSessionId: session.id } });
   return session.url;
+}
+
+export const createDepositCheckout = (token: string) => createCheckout(token, "deposit");
+
+export async function markBalancePaid(proposalId: string) {
+  const p = await db.proposal.findUnique({ where: { id: proposalId } });
+  if (!p || p.balancePaidAt) return;
+  await db.proposal.update({ where: { id: p.id }, data: { balancePaidAt: new Date() } });
+  await logDealEvent(p.dealId, "BALANCE_PAID", usd(paymentAmount(p, "balance")));
 }
 
 export async function markDepositPaid(proposalId: string) {

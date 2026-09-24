@@ -81,7 +81,8 @@ export function sendingBlockers(s: Settings): string[] {
   const out: string[] = [];
   if (!s.physicalAddress.trim()) out.push("Physical mailing address (required by CAN-SPAM)");
   if (!s.fromEmail.trim() && !process.env.SMTP_USER && !process.env.SMTP_MAILBOXES) out.push("From email / mailbox");
-  if ((process.env.MAIL_TRANSPORT ?? "log") === "log") out.push("MAIL_TRANSPORT is 'log' (dry run: nothing leaves the building)");
+  const live = (process.env.LIVE_SEND ?? "").toLowerCase() === "on" && ["smtp", "resend"].includes((process.env.MAIL_TRANSPORT ?? "").toLowerCase());
+  if (!live) out.push("Safe mode: LIVE_SEND is not 'on' (dry run: emails are recorded, nothing is sent)");
   return out;
 }
 

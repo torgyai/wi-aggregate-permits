@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { titleRank } from "../apollo";
+import { repriceDeal } from "../quote";
 import { getSettings, type Settings } from "../settings";
 import { buildLeadContext } from "./context";
 import { composeBody, mailboxes, sendMail, transportName } from "./mailer";
@@ -37,6 +38,7 @@ export async function enrollNewLeads(now = new Date(), settings?: Settings) {
       companyId: { not: null },
       company: {
         isLargeNational: false,
+        excluded: false,
         contacts: { some: { email: { not: null }, doNotContact: false } },
         deals: { none: { stage: { in: [...OPEN_STAGES, "WON"] } } },
       },
@@ -76,6 +78,7 @@ export async function enrollNewLeads(now = new Date(), settings?: Settings) {
         source: "OUTBOUND",
       },
     });
+    await repriceDeal(deal.id, s);
     await db.enrollment.create({
       data: {
         contactId: contact.id,

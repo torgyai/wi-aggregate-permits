@@ -29,25 +29,25 @@ export default async function ProposalPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="card overflow-hidden">
-        <div className="bg-stone-900 px-8 py-8 text-white">
-          <div className="text-xs uppercase tracking-widest text-amber-300">{s.companyName} · Proposal</div>
+        <div className="bg-slate-900 px-8 py-8 text-white">
+          <div className="text-xs uppercase tracking-widest text-indigo-300">{s.companyName} · Proposal</div>
           <h1 className="mt-2 text-3xl font-bold">{scope.packageName}</h1>
-          <p className="mt-2 text-stone-300">
+          <p className="mt-2 text-slate-300">
             Prepared for {scope.clientName}
             {scope.siteName && <> · {scope.siteName}</>}
             {scope.county && <> · {scope.county} County, Wisconsin</>}
           </p>
           <div className="mt-6 flex flex-wrap gap-8">
             <div>
-              <div className="text-xs uppercase text-stone-400">Fixed fee</div>
+              <div className="text-xs uppercase text-slate-400">Fixed fee</div>
               <div className="text-2xl font-bold">{usd(p.price)}</div>
             </div>
             <div>
-              <div className="text-xs uppercase text-stone-400">Typical timeline</div>
+              <div className="text-xs uppercase text-slate-400">Typical timeline</div>
               <div className="text-2xl font-bold">{scope.timelineWeeks[0]}–{scope.timelineWeeks[1]} weeks</div>
             </div>
             <div>
-              <div className="text-xs uppercase text-stone-400">Valid until</div>
+              <div className="text-xs uppercase text-slate-400">Valid until</div>
               <div className="text-2xl font-bold">{fmtDate(p.expiresAt)}</div>
             </div>
           </div>
@@ -55,11 +55,11 @@ export default async function ProposalPage({
 
         <div className="space-y-8 px-8 py-8">
           {searchParams.paid && <p className="rounded bg-emerald-50 px-4 py-3 text-emerald-800">Deposit received — thank you. We&apos;re underway.</p>}
-          {searchParams.declined && <p className="rounded bg-stone-100 px-4 py-3">Understood — thanks for considering us.</p>}
+          {searchParams.declined && <p className="rounded bg-slate-100 px-4 py-3">Understood — thanks for considering us.</p>}
 
           <section>
             <h2 className="mb-2 text-lg font-semibold">What you get</h2>
-            <p className="text-stone-700">
+            <p className="text-slate-700">
               We prepare, file and see through every approval your site needs, and deal with the county and WDNR directly. You review and sign; we write, file, answer comments and chase decisions. Permits run in parallel, so the slowest approval sets your start date instead of the sum of all of them.
             </p>
           </section>
@@ -68,14 +68,14 @@ export default async function ProposalPage({
             <h2 className="mb-3 text-lg font-semibold">Approvals in scope</h2>
             <div className="space-y-4">
               {scope.included.map((i) => (
-                <div key={i.key} className="rounded-lg border border-stone-200 p-4">
+                <div key={i.key} className="rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className="font-semibold">{i.name}</h3>
-                    <span className="text-xs font-medium uppercase text-amber-800">{STATUS_WORD[i.status] ?? i.status}</span>
+                    <span className="text-xs font-medium uppercase text-indigo-700">{STATUS_WORD[i.status] ?? i.status}</span>
                   </div>
-                  <div className="text-xs text-stone-500">{i.agency} · {i.citation}</div>
-                  <p className="mt-1 text-sm text-stone-600">{i.reason}</p>
-                  <ul className="mt-2 list-disc pl-5 text-sm text-stone-700">
+                  <div className="text-xs text-slate-500">{i.agency} · {i.citation}</div>
+                  <p className="mt-1 text-sm text-slate-600">{i.reason}</p>
+                  <ul className="mt-2 list-disc pl-5 text-sm text-slate-700">
                     {i.deliverables.map((d) => <li key={d}>{d}</li>)}
                   </ul>
                 </div>
@@ -85,11 +85,11 @@ export default async function ProposalPage({
 
           <section>
             <h2 className="mb-2 text-lg font-semibold">Also included</h2>
-            <ul className="list-disc space-y-1 pl-5 text-sm text-stone-700">
+            <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {scope.alsoIncluded.map((x) => <li key={x}>{x}</li>)}
             </ul>
             {scope.optional.length > 0 && (
-              <p className="mt-3 text-sm text-stone-600">
+              <p className="mt-3 text-sm text-slate-600">
                 Recommended add-on{scope.optional.length > 1 ? "s" : ""}: {scope.optional.map((o) => o.name).join("; ")} — quoted separately if wanted.
               </p>
             )}
@@ -98,29 +98,29 @@ export default async function ProposalPage({
           <section className="grid gap-6 md:grid-cols-2">
             <div>
               <h2 className="mb-2 text-lg font-semibold">Fee &amp; payment</h2>
-              <p className="text-sm text-stone-700">{usd(p.price)} fixed. {scope.paymentTerms}</p>
+              <p className="text-sm text-slate-700">{usd(p.price)} fixed. {scope.paymentTerms}</p>
               {scope.retainer.monthly > 0 && (
-                <p className="mt-2 text-sm text-stone-600">
+                <p className="mt-2 text-sm text-slate-600">
                   Optional compliance plan: {usd(scope.retainer.monthly)}/month. {scope.retainer.description}
                 </p>
               )}
             </div>
             <div>
               <h2 className="mb-2 text-lg font-semibold">Not included</h2>
-              <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+              <ul className="list-disc space-y-1 pl-5 text-xs text-slate-600">
                 {scope.exclusions.map((x) => <li key={x}>{x}</li>)}
               </ul>
             </div>
           </section>
 
-          <section className="text-xs text-stone-500">
+          <section className="text-xs text-slate-500">
             Terms: Work begins on signature{p.depositPct > 0 ? " and receipt of the deposit" : ""}. We don&apos;t control agency decisions or review times; the fee covers
             preparing, filing and responding to comments through a decision on each approval in scope. If site conditions discovered during intake add an
             approval not listed above, we&apos;ll quote it before starting it. Either party may end the engagement with written notice; fees for work completed
             to that point remain due. Wisconsin law governs.
           </section>
 
-          <section id="accept" className="rounded-lg border-2 border-amber-200 bg-amber-50 p-6">
+          <section id="accept" className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-6">
             {accepted ? (
               <div className="space-y-3">
                 <h2 className="text-lg font-semibold text-emerald-800">Accepted {fmtDate(p.acceptedAt)} by {p.signerName}</h2>
@@ -139,7 +139,7 @@ export default async function ProposalPage({
             ) : (
               <>
                 <h2 className="mb-1 text-lg font-semibold">Accept &amp; sign</h2>
-                <p className="mb-4 text-sm text-stone-600">
+                <p className="mb-4 text-sm text-slate-600">
                   Typing your name below is your electronic signature on this proposal and its terms.
                   {stripeEnabled() && p.depositPct > 0 && <> You&apos;ll then be taken to a secure page to pay the {usd(deposit)} deposit (bank transfer or card).</>}
                 </p>
@@ -157,7 +157,7 @@ export default async function ProposalPage({
                   </div>
                 </form>
                 <details className="mt-4 text-sm">
-                  <summary className="cursor-pointer text-stone-500">Not the right fit?</summary>
+                  <summary className="cursor-pointer text-slate-500">Not the right fit?</summary>
                   <form action={declineProposalAction.bind(null, params.token)} className="mt-2 flex gap-2">
                     <input className="input" name="reason" placeholder="What would have to change? (optional)" />
                     <button className="btn-secondary">Decline</button>
@@ -168,7 +168,7 @@ export default async function ProposalPage({
           </section>
         </div>
       </div>
-      <p className="mt-4 text-center text-xs text-stone-500">
+      <p className="mt-4 text-center text-xs text-slate-500">
         {s.companyName}
         {s.physicalAddress && <> · {s.physicalAddress}</>}
         {s.phone && <> · {s.phone}</>}

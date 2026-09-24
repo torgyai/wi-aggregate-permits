@@ -43,7 +43,15 @@ export function mailboxes(): Mailbox[] {
   return [];
 }
 
-export const transportName = () => (process.env.MAIL_TRANSPORT ?? "log").toLowerCase();
+/**
+ * SAFETY LOCK: real email only leaves when BOTH MAIL_TRANSPORT is smtp/resend AND
+ * LIVE_SEND=on. Anything else is a dry run: messages are recorded as sent in the
+ * app (so the whole workflow can be tested) but nothing goes over the wire.
+ */
+export const liveSendEnabled = () =>
+  (process.env.LIVE_SEND ?? "").toLowerCase() === "on" && ["smtp", "resend"].includes((process.env.MAIL_TRANSPORT ?? "").toLowerCase());
+
+export const transportName = () => (liveSendEnabled() ? (process.env.MAIL_TRANSPORT ?? "log").toLowerCase() : "log");
 
 /** Human link (confirm page). */
 export function unsubscribeUrl(email: string) {

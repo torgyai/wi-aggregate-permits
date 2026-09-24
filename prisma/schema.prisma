@@ -1,0 +1,352 @@
+// Stratex Aggregate: Wisconsin pit & quarry permitting autopilot.
+// Prospecting (MSHA mine registry + enrichment) -> automated outreach ->
+// proposal + e-sign + deposit -> permit delivery + compliance calendar.
+//
+// Enum-like fields are Strings; allowed values live in src/lib/enums.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// An operator / controller company (the buyer).
+model Company {
+  id               String    @id @default(cuid())
+  name             String
+  normalizedName   String    @unique
+  mshaOperatorIds  String[]  @default([])
+  controllerName   String?
+  domain           String?
+  website          String?
+  phone            String?
+  street           String?
+  city             String?
+  state            String?
+  zip              String?
+  employeeCount    Int?
+  /// Number of sites this controller runs nationally (from MSHA); large nationals have in-house staff.
+  nationalSiteCount Int?
+  isLargeNational  Boolean   @default(false)
+  enrichedAt       DateTime?
+  source           String    @default("MSHA") // MSHA | CSV | APOLLO | MANUAL
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  sites            Site[]
+  contacts         Contact[]
+  deals            Deal[]
+  signals          Signal[]
+}
+
+/// One pit / quarry / processing facility (usually one MSHA mine ID).
+model Site {
+  id             String    @id @default(cuid())
+  mshaMineId     String?   @unique
+  name           String
+  companyId      String?
+  company        Company?  @relation(fields: [companyId], references: [id])
+  county         String?
+  countyFips     String?
+  municipality   String?
+  latitude       Float?
+  longitude      Float?
+  commodity      String    @default("SAND_GRAVEL") // SAND_GRAVEL | CRUSHED_STONE | INDUSTRIAL_SAND | DIMENSION_STONE | OTHER
+  sicDescription String?
+  mineType       String    @default("SURFACE") // SURFACE | UNDERGROUND | FACILITY
+  mshaStatus     String    @default("ACTIVE") // ACTIVE | INTERMITTENT | NEW | TEMP_IDLED | NONPRODUCING | ABANDONED
+  statusDate     DateTime?
+  employees      Int?
+  portable       Boolean   @default(false)
+
+  // Permit-relevant attributes: inferred at first, overwritten by client intake.
+  acreage           Float?
+  isNewSite         Boolean  @default(false)
+  plannedExpansion  Boolean?
+  dewatering        Boolean?
+  washing           Boolean?
+  crushing          Boolean?
+  highCapWell       Boolean?
+  nearWetlands      Boolean?
+  oilStorageGallons Int?
+  blasting          Boolean?
+  hotMixAsphalt     Boolean?
+
+  score          Int       @default(0)
+  scoreReasons   Json      @default("[]")
+  scoredAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  signals        Signal[]
+  deals          Deal[]
+
+  @@index([score])
+  @@index([county])
+}
+
+/// A buying trigger detected automatically (registry diffs) or entered by hand.
+model Signal {
+  id         String   @id @default(cuid())
+  siteId     String?
+  site       Site?    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  companyId  String?
+  company    Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type       String // NEW_MINE | OWNERSHIP_CHANGE | REACTIVATION | STATUS_CHANGE | EXPANSION | HEARING_NOTICE | PERMIT_APPLICATION | MANUAL
+  /// Idempotency key for automatically detected signals (e.g. "wdnr:app:WI-0046515-07-123").
+  externalKey String?  @unique
+  title      String
+  detail     String?
+  weight     Int      @default(10)
+  detectedAt DateTime @default(now())
+
+  @@index([type, detectedAt])
+}
+
+model Contact {
+  id            String       @id @default(cuid())
+  companyId     String
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  firstName     String?
+  lastName      String?
+  email         String?      @unique
+  phone         String?
+  title         String?
+  linkedin      String?
+  source        String       @default("MANUAL") // CSV | APOLLO | MANUAL | REFERRAL
+  emailStatus   String       @default("UNKNOWN") // UNKNOWN | VALID | INVALID | BOUNCED
+  doNotContact  Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  enrollments   Enrollment[]
+  messages      Message[]
+  tasks         Task[]
+}
+
+/// Addresses that must never be emailed again (unsubscribes, hard bounces, complaints).
+model Suppression {
+  email     String   @id
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+/// A contact moving through an outreach sequence.
+model Enrollment {
+  id            String    @id @default(cuid())
+  contactId     String
+  contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  siteId        String?
+  dealId        String?
+  deal          Deal?     @relation(fields: [dealId], references: [id])
+  sequenceKey   String
+  angle         String    @default("GENERAL") // which trigger the copy leans on
+  status        String    @default("ACTIVE") // ACTIVE | PAUSED | REPLIED | COMPLETED | STOPPED | BOUNCED | UNSUBSCRIBED
+  currentStep   Int       @default(0)
+  nextRunAt     DateTime?
+  stoppedReason String?
+  startedAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  messages      Message[]
+
+  @@unique([contactId, sequenceKey])
+  @@index([status, nextRunAt])
+}
+
+model Message {
+  id               String      @id @default(cuid())
+  enrollmentId     String?
+  enrollment       Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  contactId        String?
+  contact          Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  dealId           String?
+  deal             Deal?       @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  direction        String // OUT | IN
+  channel          String      @default("EMAIL") // EMAIL | NOTE
+  stepIndex        Int?
+  fromEmail        String?
+  toEmail          String?
+  subject          String?
+  body             String
+  status           String // PENDING_APPROVAL | QUEUED | SENT | FAILED | RECEIVED | SKIPPED
+  error            String?
+  providerId       String?     @unique
+  inReplyTo        String?
+  classification   String? // INTERESTED | MEETING_REQUEST | PROPOSAL_REQUEST | QUESTION | NOT_NOW | NOT_INTERESTED | UNSUBSCRIBE | OUT_OF_OFFICE | REFERRAL | BOUNCE | OTHER
+  confidence       Float?
+  aiSummary        String?
+  generatedBy      String? // ai | template
+  handled          Boolean     @default(false)
+  sentAt           DateTime?
+  createdAt        DateTime    @default(now())
+
+  @@index([status])
+  @@index([direction, createdAt])
+}
+
+/// Work for a human: calls, LinkedIn touches, letters, reply approvals, meetings, permit filings.
+model Task {
+  id          String    @id @default(cuid())
+  type        String // CALL | LINKEDIN | LETTER | REVIEW_REPLY | MEETING | PERMIT | FOLLOW_UP | OTHER
+  title       String
+  detail      String?
+  dueAt       DateTime  @default(now())
+  status      String    @default("OPEN") // OPEN | DONE | SKIPPED
+  contactId   String?
+  contact     Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  dealId      String?
+  deal        Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messageId   String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([status, dueAt])
+}
+
+model Deal {
+  id               String       @id @default(cuid())
+  companyId        String
+  company          Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  siteId           String?
+  site             Site?        @relation(fields: [siteId], references: [id])
+  primaryContactId String?
+  stage            String       @default("NEW") // NEW | CONTACTED | ENGAGED | MEETING | PROPOSAL | WON | LOST
+  value            Float        @default(40000)
+  source           String       @default("OUTBOUND")
+  lostReason       String?
+  meetingAt        DateTime?
+  wonAt            DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  proposal         Proposal?
+  project          Project?
+  events           DealEvent[]
+  enrollments      Enrollment[]
+  messages         Message[]
+  tasks            Task[]
+
+  @@index([stage])
+}
+
+model DealEvent {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  type      String
+  detail    String?
+  createdAt DateTime @default(now())
+}
+
+model Proposal {
+  id              String    @id @default(cuid())
+  dealId          String    @unique
+  deal            Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  token           String    @unique
+  status          String    @default("DRAFT") // DRAFT | SENT | VIEWED | ACCEPTED | DECLINED | EXPIRED
+  price           Float
+  depositPct      Int       @default(50)
+  scope           Json // ProposalScope (see src/lib/proposals.ts)
+  termsVersion    String    @default("2026-09")
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  lastNudgeAt     DateTime?
+  nudgeCount      Int       @default(0)
+  acceptedAt      DateTime?
+  declinedAt      DateTime?
+  signerName      String?
+  signerTitle     String?
+  signerEmail     String?
+  signerIp        String?
+  stripeSessionId String?
+  depositPaidAt   DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+/// Delivery: the permitting engagement after a deal is won.
+model Project {
+  id                String         @id @default(cuid())
+  dealId            String         @unique
+  deal              Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  siteId            String?
+  status            String         @default("INTAKE") // INTAKE | DRAFTING | CLIENT_REVIEW | FILING | AGENCY_REVIEW | COMPLIANCE | CLOSED
+  intakeToken       String         @unique
+  intake            Json?
+  intakeSubmittedAt DateTime?
+  intakeRemindedAt  DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  permits           PermitItem[]
+  documents         GeneratedDoc[]
+  obligations       Obligation[]
+  tasks             Task[]
+}
+
+model PermitItem {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  key         String // permit catalog key (src/lib/permits/catalog.ts)
+  name        String
+  agency      String
+  status      String    @default("NOT_STARTED") // NOT_STARTED | DRAFTING | CLIENT_REVIEW | READY_TO_FILE | SUBMITTED | AGENCY_REVIEW | APPROVED | NOT_REQUIRED
+  reason      String?
+  targetDate  DateTime?
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([projectId, key])
+}
+
+model GeneratedDoc {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  permitKey   String?
+  title       String
+  content     String // Markdown
+  generatedBy String // ai | template
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+}
+
+/// Recurring compliance obligations (drives reminders + the annual retainer upsell).
+model Obligation {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  key        String
+  title      String
+  detail     String?
+  citation   String?
+  cadence    String // ANNUAL | QUARTERLY | MONTHLY | ONE_TIME
+  dueAt      DateTime
+  status     String    @default("UPCOMING") // UPCOMING | DONE | OVERDUE
+  remindedAt DateTime?
+  doneAt     DateTime?
+
+  @@index([status, dueAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+/// Autopilot activity log (every cron run, sync, send batch).
+model JobRun {
+  id         String    @id @default(cuid())
+  job        String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(true)
+  summary    String?
+
+  @@index([job, startedAt])
+}

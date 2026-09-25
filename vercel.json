@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "prisma db push --skip-generate && next build",
+  "buildCommand": "node scripts/vercel-build.mjs",
   "installCommand": "npm install",
   "crons": [
     {

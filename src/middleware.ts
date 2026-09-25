@@ -2,11 +2,18 @@ import { NextResponse, type NextRequest } from "next/server";
 import { readSession, SESSION_COOKIE } from "./lib/session";
 
 // Public: client-facing links, webhooks and cron (each verifies its own secret/token).
-const PUBLIC = [/^\/login/, /^\/p\//, /^\/c\//, /^\/intake\//, /^\/u\//, /^\/api\/(cron|inbound|stripe|u)\//];
+const PUBLIC = [/^\/setup/, /^\/login/, /^\/p\//, /^\/c\//, /^\/intake\//, /^\/u\//, /^\/api\/(cron|inbound|stripe|u)\//];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (PUBLIC.some((re) => re.test(pathname))) return NextResponse.next();
+  // Misconfigured deployment: explain instead of crashing.
+  if (!process.env.AUTH_SECRET || !process.env.ADMIN_PASSWORD) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/setup";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
   const session = await readSession(req.cookies.get(SESSION_COOKIE)?.value);
   if (session) return NextResponse.next();
   if (pathname.startsWith("/api/")) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

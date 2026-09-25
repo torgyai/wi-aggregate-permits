@@ -24,7 +24,11 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
             <h2 className="text-2xl font-semibold tracking-tight">Sign in</h2>
             <p className="text-sm text-slate-500">Operator account</p>
           </div>
-          {searchParams.error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">Wrong email or password.</p>}
+          {searchParams.error && (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              Wrong email or password. The login is whatever ADMIN_EMAIL / ADMIN_PASSWORD are set to in Vercel (a redeploy is needed after changing them). <a className="underline" href="/setup">Setup check</a>
+            </p>
+          )}
           <input type="hidden" name="next" value={searchParams.next ?? "/"} />
           <div>
             <label className="label" htmlFor="email">Email</label>

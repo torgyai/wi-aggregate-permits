@@ -6,7 +6,7 @@ import { fmtDateTime } from "@/lib/format";
 import { enrichNow, importCsv, rescoreNow, syncMshaNow, syncWdnrNow } from "../../actions";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 async function last(job: string) {
   return db.jobRun.findFirst({ where: { job }, orderBy: { startedAt: "desc" } });

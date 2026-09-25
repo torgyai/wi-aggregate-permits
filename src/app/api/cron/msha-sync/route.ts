@@ -5,7 +5,7 @@ import { syncMsha } from "@/lib/prospecting";
 import { syncWdnrApplications } from "@/lib/wdnr";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 /** Weekly: refresh the MSHA registry (new mines, owner changes) and WDNR permit applications. */
 export async function GET(req: Request) {

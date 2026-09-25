@@ -112,7 +112,8 @@ Tests: `npm test` (permit rules, obligations, MSHA parser, scoring, send-window/
    - Minimum: `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `APP_URL`, `CRON_SECRET`.
    - Live sending also needs `MAIL_TRANSPORT=smtp` plus `SMTP_MAILBOXES`.
    - Replies need `IMAP_*` (or point your provider's inbound webhook at `/api/inbound/email?secret=$INBOUND_SECRET`).
-4. `vercel.json` schedules the jobs:
+4. **Vercel Hobby plan** allows one cron run per day, so `vercel.json` runs the autopilot daily at 9am Central. For the full 15-minute cadence, either upgrade to Pro and set the tick schedule to `*/15 * * * *`, or point a free external scheduler (e.g. cron-job.org) at `GET https://<your-app>/api/cron/tick` every 15 minutes with header `Authorization: Bearer <CRON_SECRET>`. Hobby functions stop at 60 s; if the MSHA download times out, run `npm run msha:sync` locally against the production database.
+5. `vercel.json` schedules the jobs:
    - `/api/cron/tick` every 15 minutes, which needs a Vercel Pro plan (Hobby allows daily crons only);
    - `/api/cron/msha-sync` every Monday.
    - Both routes use `maxDuration = 300`.
